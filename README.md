@@ -1,6 +1,6 @@
 ﻿# TraceKit — Windows 软件行为记录器
 
-[![ci](https://github.com/OWNER/tracekit-win/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/tracekit-win/actions/workflows/ci.yml)
+[![ci](https://github.com/nanfangl/tracekit-win/actions/workflows/ci.yml/badge.svg)](https://github.com/nanfangl/tracekit-win/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
 
@@ -31,7 +31,7 @@
 ### 安装 / 运行
 
 ```bash
-git clone https://github.com/OWNER/tracekit-win.git && cd tracekit-win
+git clone https://github.com/nanfangl/tracekit-win.git && cd tracekit-win
 
 # 方式一：源码直接跑（零依赖，Python 3.9+ 自带 ctypes 即可）
 python -m tracekit              # 打开可视化向导
@@ -271,7 +271,7 @@ python tools\verify_outputs.py runs\演示现场-<时间>
 # 1. 建一个空仓库（不要勾 README / License），拿到地址
 # 2. 在仓库目录里
 git init -b main; git add -A; git commit -m "feat: TraceKit 1.0.0"
-git remote add origin https://github.com/<你的用户名>/tracekit-win.git
+git remote add origin https://github.com/nanfangl/tracekit-win.git
 git push -u origin main
 # 3. 建 Release（v1.0.0），把 dist\TraceKit.exe 与 dist\TraceKitDemo.exe 作为附件上传
 ```
