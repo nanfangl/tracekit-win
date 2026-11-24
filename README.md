@@ -265,3 +265,19 @@ python tools\verify_outputs.py runs\演示现场-<时间>
 `Edit` 控件里「第 N 轮：读取配置…」的文字、`app.log` 的逐行内容、按键与截图，
 外加 `界面结构.txt`（含菜单栏）、`模块清单.txt`、`系统改动.txt`、`文件副本\`、`剪贴板图片\`。
 
+## 上传到 GitHub（三步）
+
+```powershell
+# 1. 建一个空仓库（不要勾 README / License），拿到地址
+# 2. 在仓库目录里
+git init -b main; git add -A; git commit -m "feat: TraceKit 1.0.0"
+git remote add origin https://github.com/<你的用户名>/tracekit-win.git
+git push -u origin main
+# 3. 建 Release（v1.0.0），把 dist\TraceKit.exe 与 dist\TraceKitDemo.exe 作为附件上传
+```
+
+`git push` 的密码处填 **Personal Access Token**（Settings → Developer settings → Tokens (classic)），
+需要 `repo`（建库/写代码）与 `workflow`（仓库里带 `.github/workflows/ci.yml`）两个 scope。
+没有 git？用 `gh repo create tracekit-win --public --source=. --remote=origin --push`，
+或者在网页上 New repository → Add file → Upload files 把整个目录拖进去。
+`push.ps1` 是同一件事的傻瓜版：`powershell -ExecutionPolicy Bypass -File push.ps1 -RepoUrl <地址>`。

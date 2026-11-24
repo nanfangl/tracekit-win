@@ -1,11 +1,11 @@
-<#
+﻿<#
 一键推送脚本：初始化仓库、提交、加远端并推送。
 
 用法（在本目录，PowerShell）：
     # 1. 先装 git（没装的话）
     winget install --id Git.Git -e
 
-    # 2. 推送（推荐用 PAT，见 PUSH-上传指南.md）
+    # 2. 推送（需要一个带 repo + workflow 权限的 PAT，见 README 的「上传到 GitHub」一节）
     powershell -ExecutionPolicy Bypass -File push.ps1 -RepoUrl https://github.com/<你的用户名>/tracekit-win.git
 
     # 已经有仓库、只想更新：
