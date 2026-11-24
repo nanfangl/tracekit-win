@@ -1,9 +1,15 @@
-﻿name: ci
+name: ci
 
 on:
   push:
   pull_request:
   workflow_dispatch:
+
+env:
+  # en-US runner 的默认编码是 cp1252，中文输出/文件名会踩坑，统一强制 UTF-8
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: "utf-8"
+  PYTHONLEGACYWINDOWSSTDIO: "0"
 
 jobs:
   smoke:
@@ -31,6 +37,23 @@ jobs:
 
       - name: 断言确实抓到了事件并出了报告
         run: python tools/ci_assert.py ci-run
+
+      - name: 诊断摘要（无论成败都写进 Step Summary，网页上直接可见）
+        if: always()
+        shell: pwsh
+        run: |
+          "## CI 诊断" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          "``````" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          if (Test-Path ci-run) {
+            Get-ChildItem ci-run -Recurse | ForEach-Object {
+              "{0}  {1} B" -f $_.FullName.Replace((Get-Location).Path + '\', ''), $_.Length
+            } | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          } else {
+            "ci-run 目录不存在" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          }
+          "``````" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          python -c "import sqlite3,os;d=os.path.join('ci-run','events.sqlite');print(dict(sqlite3.connect(d).execute('select cat,count(*) from events group by cat')) if os.path.exists(d) else 'no db')" 2>&1 |
+            Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
       - name: 上传本次记录产物（排查失败时很有用）
         if: always()
