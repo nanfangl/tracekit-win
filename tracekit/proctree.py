@@ -25,6 +25,7 @@ class ProcessTree:
         self._paths: dict[int, str | None] = {}
         self._tracked: set[int] = set(int(r) for r in roots if r)
         self._roots: set[int] = set(self._tracked)
+        self._missing: dict[int, int] = {}             # pid -> 连续未见次数
 
     # ------------------------------------------------------------------ state
     @property
@@ -44,9 +45,27 @@ class ProcessTree:
         with self._lock:
             self._procs = procs
             alive = set(procs)
-            self._tracked &= alive
-            self._paths = {k: v for k, v in self._paths.items() if k in alive}
-        return set(self._procs)
+            # 目标刚 Popen 出来的那一瞬，Toolhelp 快照可能还没包含它。
+            # 直接 self._tracked &= alive 会把 root 永久踢掉（后面就再也跟不到），
+            # 所以给 root 与最近见过的 pid 一个宽限期：连续几轮都见不到才真丢。
+            keep: set[int] = set()
+            for pid in self._tracked:
+                if pid in alive:
+                    self._missing.pop(pid, None)
+                    keep.add(pid)
+                    continue
+                miss = self._missing.get(pid, 0) + 1
+                self._missing[pid] = miss
+                if pid in self._roots and miss <= 10:
+                    keep.add(pid)          # root：最多容忍 10 轮（≈2 秒）
+                elif miss <= 2:
+                    keep.add(pid)          # 子进程：容忍 2 轮
+            self._tracked = keep
+            for pid in list(self._missing):
+                if pid not in keep:
+                    self._missing.pop(pid, None)
+            self._paths = {k: v for k, v in self._paths.items() if k in alive or k in keep}
+        return alive
 
     def _children_map(self) -> dict[int, list[int]]:
         children: dict[int, list[int]] = {}

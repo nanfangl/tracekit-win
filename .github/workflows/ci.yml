@@ -1,4 +1,4 @@
-name: ci
+﻿name: ci
 
 on:
   push:
@@ -27,7 +27,7 @@ jobs:
         run: |
           python -m tracekit run --name ci --profile light --no-etw --no-input --no-ui `
             --no-shot-on-focus --duration 12 --out ci-run --quiet `
-            -- "$env:COMSPEC" /c "mkdir ci-data & echo hello > ci-data\a.txt & copy ci-data\a.txt ci-data\b.txt & reg add HKCU\Software\TraceKitCI /v ok /t REG_SZ /d 1 /f"
+            -- "$env:COMSPEC" /c "timeout /t 2 >nul & mkdir ci-data & echo hello > ci-data\a.txt & copy ci-data\a.txt ci-data\b.txt & reg add HKCU\Software\TraceKitCI /v ok /t REG_SZ /d 1 /f"
 
       - name: 断言确实抓到了事件并出了报告
         run: python tools/ci_assert.py ci-run

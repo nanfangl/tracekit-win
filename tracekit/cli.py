@@ -530,63 +530,9 @@ def start_session(args, external_stop=None) -> int:
                                      ("machine", "bits", "likely_vmprotect",
                                       "likely_easy_language", "import_count")}})
 
-    # --- launch the target (or attach)
-    proc = None
-    if getattr(args, "launch", False):
-        cmd = [exe] + list(args.app_args or [])
-        cwd = args.cwd or os.path.dirname(exe)
-        log(f"启动目标: {' '.join(cmd)}  (cwd={cwd})")
-        creationflags = 0
-        if args.inherit_stdio:
-            proc = subprocess.Popen(cmd, cwd=cwd, creationflags=creationflags)
-        else:
-            proc = subprocess.Popen(
-                cmd, cwd=cwd, creationflags=creationflags,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            )
-        pid = proc.pid
-        session.pid = pid
-        session.proc_handle = proc
-        session.tree.add_root(pid)
-        meta["pid"] = pid
-        core.write_meta(run_dir, meta)
-        bus.emit("mark", "target_launched", pid=pid, proc=os.path.basename(exe),
-                 path=exe, detail={"cmdline": " ".join(cmd), "cwd": cwd})
-        if not args.inherit_stdio:
-            threading.Thread(target=_stdout_pump,
-                             args=(proc, bus, run_dir, "stdout", proc.stdout, "stdout.log"),
-                             daemon=True).start()
-            threading.Thread(target=_stdout_pump,
-                             args=(proc, bus, run_dir, "stderr", proc.stderr, "stderr.log"),
-                             daemon=True).start()
-    else:
-        log(f"挂载已运行进程 pid={pid} ({winapi.process_image_path(pid)})")
-        bus.emit("mark", "target_attached", pid=pid, proc=os.path.basename(exe or ""),
-                 path=exe, detail={"pid": pid})
-
-    # --- modules
+    # --- recorders：先把监听器挂上，再启动目标，避免目标秒退漏掉早期事件
     excludes = [run_dir, os.path.join(os.getcwd(), "runs")]
     excludes += [os.path.abspath(d) for d in (args.exclude_dir or []) if d]
-    proc_rec = ProcessRecorder(bus, session.tree, interval=args.proc_interval, logger=log)
-    proc_rec.start()
-    session.add("proc", lambda: True, proc_rec.stop)
-    session.tree.refresh()
-
-    def _classify():
-        time.sleep(2.5)
-        try:
-            rt = detect.runtime_triage(pid)
-            meta["runtime"] = rt
-            core.write_meta(run_dir, meta)
-            bus.emit("mark", "runtime_classified", pid=pid,
-                     proc=os.path.basename(exe or ""), path="运行时判定",
-                     detail=rt)
-            if rt.get("easy_language"):
-                log(f"[detect] 运行时为易语言程序，证据: {', '.join(rt.get('evidence') or [])}")
-        except Exception as exc:
-            log(f"[detect] 运行时判定失败: {exc!r}")
-
-    threading.Thread(target=_classify, daemon=True).start()
 
     if modules["file"]:
         fr = FileRecorder(bus, watch_dirs, logger=log, exclude=excludes)
@@ -744,6 +690,61 @@ def start_session(args, external_stop=None) -> int:
     log(f"记录中 -> {run_dir}")
     log("按 Ctrl+C 结束记录（或等目标进程退出）")
 
+    # --- launch the target (or attach)
+    proc = None
+    if getattr(args, "launch", False):
+        cmd = [exe] + list(args.app_args or [])
+        cwd = args.cwd or os.path.dirname(exe)
+        log(f"启动目标: {' '.join(cmd)}  (cwd={cwd})")
+        creationflags = 0
+        if args.inherit_stdio:
+            proc = subprocess.Popen(cmd, cwd=cwd, creationflags=creationflags)
+        else:
+            proc = subprocess.Popen(
+                cmd, cwd=cwd, creationflags=creationflags,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            )
+        pid = proc.pid
+        session.pid = pid
+        session.proc_handle = proc
+        session.tree.add_root(pid)
+        meta["pid"] = pid
+        core.write_meta(run_dir, meta)
+        bus.emit("mark", "target_launched", pid=pid, proc=os.path.basename(exe),
+                 path=exe, detail={"cmdline": " ".join(cmd), "cwd": cwd})
+        if not args.inherit_stdio:
+            threading.Thread(target=_stdout_pump,
+                             args=(proc, bus, run_dir, "stdout", proc.stdout, "stdout.log"),
+                             daemon=True).start()
+            threading.Thread(target=_stdout_pump,
+                             args=(proc, bus, run_dir, "stderr", proc.stderr, "stderr.log"),
+                             daemon=True).start()
+    else:
+        log(f"挂载已运行进程 pid={pid} ({winapi.process_image_path(pid)})")
+        bus.emit("mark", "target_attached", pid=pid, proc=os.path.basename(exe or ""),
+                 path=exe, detail={"pid": pid})
+
+    # --- 进程记录器与运行时分型（需要目标 pid，只能放在启动之后）
+    proc_rec = ProcessRecorder(bus, session.tree, interval=args.proc_interval, logger=log)
+    proc_rec.start()
+    session.add("proc", lambda: True, proc_rec.stop)
+    session.tree.refresh()
+
+    def _classify():
+        time.sleep(2.5)
+        try:
+            rt = detect.runtime_triage(pid)
+            meta["runtime"] = rt
+            core.write_meta(run_dir, meta)
+            bus.emit("mark", "runtime_classified", pid=pid,
+                     proc=os.path.basename(exe or ""), path="运行时判定",
+                     detail=rt)
+            if rt.get("easy_language"):
+                log(f"[detect] 运行时为易语言程序，证据: {', '.join(rt.get('evidence') or [])}")
+        except Exception as exc:
+            log(f"[detect] 运行时判定失败: {exc!r}")
+
+    threading.Thread(target=_classify, daemon=True).start()
     # --- main wait loop
     stop = threading.Event()
 
