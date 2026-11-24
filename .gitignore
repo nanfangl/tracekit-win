@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+dist_demo/
+build_demo/
+.venv/
+venv/
+
+# PyInstaller 生成物
+*.spec
+*.manifest
+
+# 运行产物（记录结果不进仓库）
+runs/
+演示数据/
+demo-work/
+演示截图/
+*.etl
+events.sqlite*
+events.jsonl
+run_meta.json
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# 本地打包出来的可执行文件（走 Release，不入库）
+TraceKit.exe
+TraceKitDemo.exe
